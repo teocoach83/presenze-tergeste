@@ -1,0 +1,125 @@
+<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#17202a"><title>TNA — Presenze</title><link rel="manifest" href="manifest.json"><style>
+:root{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#17202a;background:#f5f6f8}
+*{box-sizing:border-box}body{margin:0}header{position:sticky;top:0;z-index:4;background:white;border-bottom:1px solid #e7e9ee;padding:15px 18px;display:flex;justify-content:space-between;align-items:center}.brand{display:flex;align-items:center}.brand img{display:block;width:72px;height:auto}.brandWrap{display:flex;flex-direction:column;gap:2px}.sub{font-size:12px;color:#737b87;margin-top:2px}button{font:inherit;border:0;cursor:pointer}.ghost{background:#eef0f3;padding:9px 13px;border-radius:10px;font-weight:700}
+main{max-width:980px;margin:auto;padding:12px}.tabs{display:flex;gap:6px;background:#e9ebef;padding:5px;border-radius:13px;margin-bottom:12px}.tab{flex:1;padding:10px;border-radius:9px;background:transparent;font-weight:700;color:#68707b}.tab.active{background:white;color:#17202a;box-shadow:0 1px 4px #0001}
+.datebar{background:white;border-radius:15px;padding:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 2px 10px #00000008}.datebar>div{text-align:center}.datebar b{display:block;text-transform:capitalize}.datebar small{display:block;color:#7b8490;margin-top:4px}.datebar button{width:42px;height:42px;border-radius:12px;background:#eef0f3;font-size:28px}.summary{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}.summary div{background:white;padding:14px;border-radius:13px}.summary span{display:block;color:#7a818c;font-size:12px}.summary strong{display:block;margin-top:5px}.red{color:#c73535!important}.actions{display:flex;gap:8px;margin:10px 0}.actions button{padding:11px 14px;border-radius:11px;font-weight:800}.primary{background:#17202a;color:white}.cancel{background:#ffe9e9;color:#b22c2c}
+.list{display:grid;gap:8px}.athlete{background:white;border-radius:14px;padding:12px;display:grid;grid-template-columns:minmax(170px,1fr) auto;gap:12px;align-items:center;border:1px solid #eceef2}.athlete.warn{border-color:#efb8b8}.name small{display:block;color:#7b8490;font-size:11px;margin-top:4px}.buttons{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}.buttons button{padding:8px 9px;border-radius:9px;background:#eef0f3;font-size:12px;font-weight:700}.buttons .selected{outline:2px solid #17202a;background:#fff}.buttons .redbg{background:#ffe8e8}.buttons .yellowbg{background:#fff2cf}.buttons .greybg{background:#e4e6e9}
+h2{margin:10px 0 5px}h3{text-transform:capitalize}.muted{color:#727b86;font-size:13px}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.card{background:white;border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:5px}.card strong{font-size:25px}.card span{color:#727b86;font-size:12px}.dangerCard{border:1px solid #efb8b8}.tableWrap{overflow:auto;background:white;border-radius:14px}table{border-collapse:collapse;width:100%;min-width:760px}th,td{padding:10px;border-bottom:1px solid #eceef2;text-align:center;font-size:12px}th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:white}
+.calendar{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.calendar section{background:white;border-radius:14px;padding:12px}.day{display:flex;width:100%;align-items:center;gap:12px;text-align:left;padding:9px;border-radius:9px;background:#f5f6f8;margin:4px 0}.day span{font-weight:900;width:25px}.day div{font-size:12px}.day.off{background:#f0f0f0;color:#8a8f96}
+@media(max-width:700px){.athlete{grid-template-columns:1fr}.buttons{justify-content:flex-start}.cards{grid-template-columns:repeat(2,1fr)}.calendar{grid-template-columns:1fr}.actions button{flex:1}.datebar b{font-size:13px}}
+</style></head><body><div id="app"></div><script>
+const athletes = ["Matteo Agosti", "Francesco Grassilli", "Giulio Turisini", "Mykyta Krasutsky", "Martina Babic", "Sveva Bibalo", "Sofia Reia", "Tommaso Borini", "Greta Mengucci", "Cloe Ruttar", "Rachele Pavoni", "Angelica Collari"];
+const start = new Date("2026-09-14T00:00:00");
+const end = new Date("2027-08-09T00:00:00");
+const STORAGE = "tergeste-presenze-v1";
+let state = JSON.parse(localStorage.getItem(STORAGE) || '{"days":{}}');
+
+function key(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
+function save(){ localStorage.setItem(STORAGE, JSON.stringify(state)); render(); }
+function dayObj(s){ const d=new Date(s+"T00:00:00"); return d; }
+function fmt(s){ return dayObj(s).toLocaleDateString("it-IT",{weekday:"long",day:"2-digit",month:"long",year:"numeric"}); }
+
+function allTrainingDays(){
+  const a=[]; let d=new Date(start);
+  while(d<=end){ if(d.getDay()>=1 && d.getDay()<=6)a.push(key(d)); d.setDate(d.getDate()+1); }
+  return a;
+}
+const trainingDays = allTrainingDays();
+
+function record(ds){
+  if(!state.days[ds]) state.days[ds]={globalCancelled:false, excluded:[], absences:{}, justified:{}};
+  return state.days[ds];
+}
+function excluded(ds,i){ return !!record(ds).excluded.includes(i); }
+function absence(ds,i){ return !!record(ds).absences[i]; }
+function justified(ds,i){ return !!record(ds).justified[i]; }
+
+function stats(i, month=null){
+  let eligible=0,present=0,abs=0,just=0;
+  const cutoff = selected || currentDay();
+  trainingDays.forEach(ds=>{
+    if(ds > cutoff) return;
+    if(month && !ds.startsWith(month)) return;
+    const r=record(ds);
+    if(r.globalCancelled || excluded(ds,i)) return;
+    eligible++;
+    if(absence(ds,i)){ abs++; if(justified(ds,i)) just++; }
+    else present++;
+  });
+  return {eligible,present,abs,just,pct:eligible?present/eligible*100:100};
+}
+function pctText(p){ return p.toFixed(1).replace(".0","") + "%"; }
+function status(p){ return p < 90 ? "danger":"ok"; }
+
+function currentDay(){
+  const now = new Date();
+  const k = key(new Date(now.getFullYear(),now.getMonth(),now.getDate()));
+  if(trainingDays.includes(k)) return k;
+  return trainingDays.find(d=>d>=k) || trainingDays[trainingDays.length-1];
+}
+let selected = currentDay(); window._tab = "today";
+
+function render(){
+  document.querySelector("#app").innerHTML = `
+  <header><div class="brandWrap"><div class="brand"><img src="data:image/png;base64,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" alt="TNA"></div><div class="sub">Registro presenze</div></div>
+    <button class="ghost" onclick="exportData()">Esporta</button>
+  </header>
+  <main>
+    <section class="tabs">
+      <button class="tab active" onclick="showTab('today')">Allenamento</button>
+      <button class="tab" onclick="showTab('athletes')">Atleti</button>
+      <button class="tab" onclick="showTab('calendar')">Calendario</button>
+    </section>
+    <div id="content"></div>
+  </main>`;
+  showTab(window._tab || "today");
+}
+window.showTab = function(t){ window._tab=t; document.querySelectorAll(".tab").forEach((b,i)=>b.classList.toggle("active",["today","athletes","calendar"][i]===t)); if(t==="today")renderToday(); if(t==="athletes")renderAthletes(); if(t==="calendar")renderCalendar(); }
+
+function renderToday(){
+ const r=record(selected);
+ const season = athletes.map((_,i)=>stats(i).pct);
+ const below=athletes.filter((_,i)=>stats(i).pct<90).length;
+ document.querySelector("#content").innerHTML=`
+ <div class="datebar"><button onclick="moveDay(-1)">‹</button><div><b>${fmt(selected)}</b><small>6 allenamenti settimanali · percentuali fino al giorno visualizzato</small></div><button onclick="moveDay(1)">›</button></div>
+ <div class="summary"><div><span>Atleti sotto 90%</span><strong class="${below?'red':''}">${below}</strong></div><div><span>Allenamento</span><strong>${r.globalCancelled?'ANNULLATO':'ATTIVO'}</strong></div></div>
+ <div class="actions"><button onclick="setGlobalCancel()" class="cancel">${r.globalCancelled?'Ripristina allenamento':'Annulla per tutti'}</button><button onclick="allPresent()" class="primary">Tutti presenti</button></div>
+ <div class="list">${athletes.map((a,i)=>{
+   const ex=excluded(selected,i), ab=absence(selected,i), ju=justified(selected,i), p=stats(i).pct, m=stats(i,selected.slice(0,7)).pct;
+   return `<div class="athlete ${p<90?'warn':''}">
+    <div class="name"><b>${html.escape(a)}</b><small>Mese ${pctText(m)} · Stagione ${pctText(p)}</small></div>
+    <div class="buttons">
+      <button class="${!ab&&!ex?'selected':''}" onclick="setPresent(${i})">Presente</button>
+      <button class="${ab&&!ju&&!ex?'selected redbg':''}" onclick="setAbsent(${i},false)">Assente</button>
+      <button class="${ab&&ju&&!ex?'selected yellowbg':''}" onclick="setAbsent(${i},true)">Giust.</button>
+      <button class="${ex?'selected greybg':''}" onclick="setExcluded(${i})">Escluso</button>
+    </div>
+   </div>`}).join("")}</div>`;
+}
+window.moveDay=function(delta){ let n=trainingDays.indexOf(selected)+delta; if(n>=0&&n<trainingDays.length){selected=trainingDays[n];renderToday();}}
+window.ensure=function(){record(selected);}
+window.setPresent=function(i){ensure(); const r=record(selected); delete r.absences[i]; delete r.justified[i]; r.excluded=r.excluded.filter(x=>x!==i); save();}
+window.setAbsent=function(i,j){ensure(); const r=record(selected); r.absences[i]=true; if(j)r.justified[i]=true;else delete r.justified[i]; r.excluded=r.excluded.filter(x=>x!==i); save();}
+window.setExcluded=function(i){ensure(); const r=record(selected); if(r.excluded.includes(i))r.excluded=r.excluded.filter(x=>x!==i);else{r.excluded.push(i);delete r.absences[i];delete r.justified[i];} save();}
+window.allPresent=function(){ensure(); const r=record(selected); r.absences={};r.justified={};r.excluded=[];r.globalCancelled=false;save();}
+window.setGlobalCancel=function(){ensure(); const r=record(selected); r.globalCancelled=!r.globalCancelled; if(r.globalCancelled){r.absences={};r.justified={};r.excluded=[];} save();}
+
+function renderAthletes(){
+ const months=[...new Set(trainingDays.map(x=>x.slice(0,7)))];
+ document.querySelector("#content").innerHTML=`
+ <h2>Situazione atleti</h2><p class="muted">La soglia obbligatoria è 90%. Le esclusioni individuali e gli allenamenti annullati non entrano nel denominatore.</p>
+ <div class="cards">${athletes.map((a,i)=>{let s=stats(i);return `<div class="card ${s.pct<90?'dangerCard':''}"><b>${html.escape(a)}</b><strong>${pctText(s.pct)}</strong><span>${s.present}/${s.eligible} presenze · ${s.abs} assenze</span></div>`}).join("")}</div>
+ <h3>Dettaglio mensile</h3>
+ <div class="tableWrap"><table><thead><tr><th>Atleta</th>${months.map(m=>`<th>${new Date(m+"-01").toLocaleDateString("it-IT",{month:"short"})}</th>`).join("")}<th>Stagione</th></tr></thead><tbody>${athletes.map((a,i)=>`<tr><td>${html.escape(a)}</td>${months.map(m=>{let s=stats(i,m);return `<td class="${s.pct<90?'red':''}">${pctText(s.pct)}</td>`}).join("")}<td class="${stats(i).pct<90?'red':''}"><b>${pctText(stats(i).pct)}</b></td></tr>`).join("")}</tbody></table></div>`;
+}
+function renderCalendar(){
+ const byMonth={};
+ trainingDays.forEach(d=>(byMonth[d.slice(0,7)]??=[]).push(d));
+ document.querySelector("#content").innerHTML=`<h2>Calendario</h2><p class="muted">Tocca un giorno per registrare o correggere le presenze.</p>
+ <div class="calendar">${Object.entries(byMonth).map(([m,days])=>`<section><h3>${new Date(m+"-01").toLocaleDateString("it-IT",{month:"long",year:"numeric"})}</h3>${days.map(d=>{let r=record(d);let n=athletes.filter((_,i)=>absence(d,i)).length;return `<button class="day ${r.globalCancelled?'off':''}" onclick="openDay('${d}')"><span>${new Date(d+"T00:00:00").getDate()}</span><div>${r.globalCancelled?'Allenamento annullato':n?`${n} assenz${n===1?'a':'e'}`:'Tutti presenti'}</div></button>`}).join("")}</section>`).join("")}</div>`;
+}
+window.openDay=function(d){selected=d;showTab("today");}
+window.exportData=function(){const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="presenze-tergeste-backup.json";a.click();}
+window.html={escape:(s)=>s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))};
+render();
+</script></body></html>
