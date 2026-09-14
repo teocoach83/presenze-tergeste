@@ -14,7 +14,7 @@ const end = new Date("2027-08-09T00:00:00");
 const STORAGE = "tergeste-presenze-v1";
 let state = JSON.parse(localStorage.getItem(STORAGE) || '{"days":{}}');
 
-function key(d){ return d.toISOString().slice(0,10); }
+function key(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
 function save(){ localStorage.setItem(STORAGE, JSON.stringify(state)); render(); }
 function dayObj(s){ const d=new Date(s+"T00:00:00"); return d; }
 function fmt(s){ return dayObj(s).toLocaleDateString("it-IT",{weekday:"long",day:"2-digit",month:"long",year:"numeric"}); }
@@ -55,7 +55,7 @@ function currentDay(){
   if(trainingDays.includes(k)) return k;
   return trainingDays.find(d=>d>=k) || trainingDays[trainingDays.length-1];
 }
-let selected = currentDay();
+let selected = currentDay(); window._tab = "today";
 
 function render(){
   document.querySelector("#app").innerHTML = `
