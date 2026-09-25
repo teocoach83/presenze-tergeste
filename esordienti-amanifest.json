@@ -1,0 +1,14 @@
+{
+  "id": "/presenze-tergeste/esordienti-a-app",
+  "name": "Presenze Esordienti A",
+  "short_name": "Esordienti A",
+  "start_url": "/presenze-tergeste/esordienti-a/",
+  "scope": "/presenze-tergeste/esordienti-a/",
+  "display": "standalone",
+  "background_color": "#f5f7fa",
+  "theme_color": "#17202a",
+  "icons": [
+    {"src":"/presenze-tergeste/icon-192.png","sizes":"192x192","type":"image/png"},
+    {"src":"/presenze-tergeste/icon-512.png","sizes":"512x512","type":"image/png"}
+  ]
+}
