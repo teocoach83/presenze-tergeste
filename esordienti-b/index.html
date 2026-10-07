@@ -14,7 +14,7 @@ h2{margin:10px 0 5px}h3{text-transform:capitalize}.muted{color:#727b86;font-size
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script><script>
 const athletes = ["BANDI ALYS","BIASONI CRISTIAN","CERAR MARGHERITA","CHELLERI CHIARA","CIANI MARGHERITA","DE SANTIS MARK","FALSO ANIA","FERLUGA VALENTINA","GEREBIZZA MATTEO","GERGIC MASSIMILIANO","GUIDA BERENICE","KOGUEP TCHUETIE CLAUDIA","KRASUTSKA ALESSANDRA","MANDALA' SAMUELE","MARCHI BRENNO","MATTEUCCI ALICE","NUVOLA REBECCA","NUVOLA TOMMASO","PAHOR KIM","PAJKIC IRINA","PASSAGLIA VIOLA","SERLI ENEA","SIROTICH VIOLA","VASOVIC MIRIAM"];
 const start = new Date("2026-09-14T00:00:00");
-const end = new Date("2027-07-31T00:00:00");
+const end = new Date("2027-06-30T00:00:00");
 const STORAGE = "tergeste-presenze-esordienti-b-v1";
 const firebaseConfig={apiKey:"AIzaSyAkHhv2J7UsF-SYeCKIMNMKnEuR3bAEMd8",authDomain:"presenze-tergeste-fd49f.firebaseapp.com",projectId:"presenze-tergeste-fd49f",storageBucket:"presenze-tergeste-fd49f.firebasestorage.app",messagingSenderId:"195234954557",appId:"1:195234954557:web:6582968ede77d4bcd4d954"};
 firebase.initializeApp(firebaseConfig);
@@ -40,7 +40,7 @@ function fmt(s){ return dayObj(s).toLocaleDateString("it-IT",{weekday:"long",day
 
 function allTrainingDays(){
   const a=[]; let d=new Date(start);
-  while(d<=end){ if(d.getDay()>=1 && d.getDay()<=5)a.push(key(d)); d.setDate(d.getDate()+1); }
+  while(d<=end){ if([1,2,4,5].includes(d.getDay()))a.push(key(d)); d.setDate(d.getDate()+1); }
   return a;
 }
 const trainingDays = allTrainingDays();
@@ -100,7 +100,7 @@ function renderToday(){
  const season = athletes.map((_,i)=>stats(i).pct);
  const below=athletes.filter((_,i)=>stats(i).pct<90).length;
  document.querySelector("#content").innerHTML=`
- <div class="datebar"><button onclick="moveDay(-1)">‹</button><div><b>${fmt(selected)}</b><small>5 allenamenti settimanali · percentuali fino al giorno visualizzato</small></div><button onclick="moveDay(1)">›</button></div>
+ <div class="datebar"><button onclick="moveDay(-1)">‹</button><div><b>${fmt(selected)}</b><small>4 allenamenti settimanali · percentuali fino al giorno visualizzato</small></div><button onclick="moveDay(1)">›</button></div>
  <div class="summary"><div><span>Atleti sotto 90%</span><strong class="${below?'red':''}">${below}</strong></div><div><span>Allenamento</span><strong>${r.globalCancelled?'ANNULLATO':'ATTIVO'}</strong></div></div>
  <div class="actions"><button onclick="setGlobalCancel()" class="cancel">${r.globalCancelled?'Ripristina allenamento':'Annulla per tutti'}</button><button onclick="allPresent()" class="primary">Tutti presenti</button></div>
  <div class="list">${athletes.map((a,i)=>{
