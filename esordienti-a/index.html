@@ -6,16 +6,35 @@ main{max-width:980px;margin:auto;padding:12px}.tabs{display:flex;gap:6px;backgro
 .list{display:grid;gap:8px}.athlete{background:white;border-radius:14px;padding:12px;display:grid;grid-template-columns:minmax(170px,1fr) auto;gap:12px;align-items:center;border:1px solid #eceef2}.athlete.warn{border-color:#efb8b8}.name small{display:block;color:#7b8490;font-size:11px;margin-top:4px}.buttons{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}.buttons button{padding:8px 9px;border-radius:9px;background:#eef0f3;font-size:12px;font-weight:700}.buttons .selected{outline:2px solid #17202a;background:#fff}.buttons .redbg{background:#ffe8e8}.buttons .yellowbg{background:#fff2cf}.buttons .greybg{background:#e4e6e9}
 h2{margin:10px 0 5px}h3{text-transform:capitalize}.muted{color:#727b86;font-size:13px}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.card{background:white;border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:5px}.card strong{font-size:25px}.card span{color:#727b86;font-size:12px}.dangerCard{border:1px solid #efb8b8}.tableWrap{overflow:auto;background:white;border-radius:14px}table{border-collapse:collapse;width:100%;min-width:760px}th,td{padding:10px;border-bottom:1px solid #eceef2;text-align:center;font-size:12px}th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:white}
 .calendar{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.calendar section{background:white;border-radius:14px;padding:12px}.day{display:flex;width:100%;align-items:center;gap:12px;text-align:left;padding:9px;border-radius:9px;background:#f5f6f8;margin:4px 0}.day span{font-weight:900;width:25px}.day div{font-size:12px}.day.off{background:#f0f0f0;color:#8a8f96}
+.status{font-size:11px;color:#5b6470;margin:8px 0}
 @media(max-width:700px){.athlete{grid-template-columns:1fr}.buttons{justify-content:flex-start}.cards{grid-template-columns:repeat(2,1fr)}.calendar{grid-template-columns:1fr}.actions button{flex:1}.datebar b{font-size:13px}}
-</style></head><body><div id="app"></div><script>
+</style></head><body><div id="app"></div>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script><script>
 const athletes = ["Lavinia Caruso", "Daniele Clon", "Noah Kobec", "Beatrice Lovriha", "Samuel Matteucci", "Minja Milic", "Camilla Opera", "Michelle Pahor", "Nicholas Pirrera", "Tommaso Sperco", "Alessandro Ubaldini"];
 const start = new Date("2026-09-14T00:00:00");
 const end = new Date("2027-07-31T00:00:00");
 const STORAGE = "tergeste-presenze-esordienti-a-v1";
+const firebaseConfig={apiKey:"AIzaSyAkHhv2J7UsF-SYeCKIMNMKnEuR3bAEMd8",authDomain:"presenze-tergeste-fd49f.firebaseapp.com",projectId:"presenze-tergeste-fd49f",storageBucket:"presenze-tergeste-fd49f.firebasestorage.app",messagingSenderId:"195234954557",appId:"1:195234954557:web:6582968ede77d4bcd4d954"};
+firebase.initializeApp(firebaseConfig);
+const db=firebase.firestore(),docRef=db.collection("attendance").doc("esordienti-a");
 let state = JSON.parse(localStorage.getItem(STORAGE) || '{"days":{}}');
 
 function key(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
-function save(){ localStorage.setItem(STORAGE, JSON.stringify(state)); render(); }
+async function save(){
+  render();
+  try{
+    await docRef.set(state);
+    localStorage.setItem(STORAGE,JSON.stringify(state));
+    setSyncStatus("✓ Salvato e sincronizzato con Firebase");
+  }catch(e){
+    console.error("Firebase:",e);
+    localStorage.setItem(STORAGE,JSON.stringify(state));
+    setSyncStatus("⚠️ Firebase non raggiungibile: dati locali salvati");
+  }
+}
+function setSyncStatus(msg){let el=document.getElementById("syncStatus");if(el)el.textContent=msg;}
 function dayObj(s){ const d=new Date(s+"T00:00:00"); return d; }
 function fmt(s){ return dayObj(s).toLocaleDateString("it-IT",{weekday:"long",day:"2-digit",month:"long",year:"numeric"}); }
 
@@ -70,7 +89,7 @@ function render(){
       <button class="tab" onclick="showTab('athletes')">Atleti</button>
       <button class="tab" onclick="showTab('calendar')">Calendario</button>
     </section>
-    <div id="content"></div>
+    <div id="syncStatus" class="status">Connessione al database…</div><div id="content"></div>
   </main>`;
   showTab(window._tab || "today");
 }
@@ -122,4 +141,37 @@ window.openDay=function(d){selected=d;showTab("today");}
 window.exportData=function(){const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="presenze-esordienti-a-backup.json";a.click();}
 window.html={escape:(s)=>s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))};
 render();
+async function loadCloud(){
+  try{
+    const localRaw=localStorage.getItem(STORAGE);
+    const localState=localRaw?JSON.parse(localRaw):{days:{}};
+    if(!firebase.auth().currentUser) await firebase.auth().signInAnonymously();
+    if(!firebase.auth().currentUser) throw new Error("Autenticazione Firebase non completata");
+    const snap=await docRef.get();
+    const hasCloud=snap.exists && snap.data().days && Object.keys(snap.data().days).length>0;
+    if(hasCloud){
+      state={days:snap.data().days};
+    }else{
+      state=localState;
+      await docRef.set(state);
+    }
+    localStorage.setItem(STORAGE,JSON.stringify(state));
+    setSyncStatus("✓ Sincronizzato · storico protetto");
+    docRef.onSnapshot(s=>{
+      if(!s.exists||!s.data().days)return;
+      state={days:s.data().days};
+      localStorage.setItem(STORAGE,JSON.stringify(state));
+      render();
+      setSyncStatus("✓ Sincronizzato · storico protetto");
+    },e=>{
+      console.error("Firebase listener:",e);
+      setSyncStatus("⚠️ Connessione Firebase interrotta · dati locali");
+    });
+  }catch(e){
+    console.error("Firebase:",e);
+    setSyncStatus("⚠️ Firebase non raggiungibile · dati locali");
+  }
+  render();
+}
+loadCloud();
 </script></body></html>
